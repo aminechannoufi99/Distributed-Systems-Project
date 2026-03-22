@@ -1,0 +1,127 @@
+# coordinator.py line by line
+
+Note: blank lines are just for readability.
+
+- `from __future__ import annotations` -> active les annotations de types en avant.
+- `import threading` -> pour thread coordinateur.
+- `import time` -> timestamps.
+- `from queue import Empty, Queue` -> file + exception Empty.
+- `from typing import Dict, Optional` -> types utilises.
+- `import messages` -> protocole des messages.
+- `from state import (` -> import des constantes et classes.
+- `    AVAILABLE,` -> statut disponible.
+- `    BUSY,` -> statut occupe.
+- `    COMPLETED,` -> statut terminee.
+- `    PENDING,` -> statut en attente.
+- `    PROCESSING,` -> statut en cours.
+- `    Order,` -> classe Order.
+- `    StateStore,` -> etat global.
+- `)` -> fin import.
+- `class Coordinator(threading.Thread):` -> le coordinateur est un thread.
+- `    def __init__(` -> constructeur.
+- `        self,` -> instance.
+- `        state_store: StateStore,` -> etat global.
+- `        inbox: Queue,` -> file d entree.
+- `        pizzaiolo_inboxes: Dict[int, Queue],` -> files des pizzaioli.
+- `        gui_queue: Optional[Queue] = None,` -> file vers GUI.
+- `        stop_event: Optional[threading.Event] = None,` -> signal d arret.
+- `    ) -> None:` -> fin signature.
+- `        super().__init__(name="Coordinator", daemon=True)` -> init thread.
+- `        self.state_store = state_store` -> stocke l etat.
+- `        self.inbox = inbox` -> stocke la file d entree.
+- `        self.pizzaiolo_inboxes = pizzaiolo_inboxes` -> stocke les files pizzaioli.
+- `        self.gui_queue = gui_queue` -> stocke la file GUI.
+- `        self.stop_event = stop_event or threading.Event()` -> signal d arret.
+- `        self._last_gui_emit = 0.0` -> dernier envoi GUI (anti-spam).
+- `    def run(self) -> None:` -> boucle principale du thread.
+- `        self._log("Coordinator started")` -> log demarrage.
+- `        self._emit_state(force=True)` -> snapshot initial.
+- `        while not self.stop_event.is_set():` -> boucle tant que pas arrete.
+- `            try:` -> lecture de la file.
+- `                msg = self.inbox.get(timeout=0.5)` -> attend un message.
+- `            except Empty:` -> si pas de message.
+- `                msg = None` -> rien recu.
+- `            if msg:` -> si message existe.
+- `                if msg.get("type") == messages.SHUTDOWN:` -> si shutdown.
+- `                    break` -> sortir.
+- `                self._handle_message(msg)` -> traite le message.
+- `            self._try_assign()` -> tente d assigner une commande.
+- `        self._log("Coordinator stopped")` -> log arret.
+- `    def _handle_message(self, msg: dict) -> None:` -> route les messages.
+- `        msg_type = msg.get("type")` -> lit le type.
+- `        if msg_type == messages.NEW_ORDER:` -> nouvelle commande.
+- `            self._handle_new_order(msg)` -> traitement.
+- `        elif msg_type == messages.COMPLETE:` -> completion.
+- `            self._handle_complete(msg)` -> traitement.
+- `    def _handle_new_order(self, msg: dict) -> None:` -> logique NEW_ORDER.
+- `        order_id = msg["order_id"]` -> id commande.
+- `        pizza_type = msg["pizza_type"]` -> type pizza.
+- `        now = msg.get("created_at", time.time())` -> timestamp creation.
+- `        with self.state_store.lock:` -> protege l etat.
+- `            if order_id in self.state_store.orders:` -> si deja connue.
+- `                self._log(f"Duplicate order ignored: {order_id}")` -> log.
+- `                return` -> stop.
+- `            order = Order(` -> cree Order.
+- `                order_id=order_id,` -> id.
+- `                pizza_type=pizza_type,` -> type.
+- `                status=PENDING,` -> en attente.
+- `                created_at=now,` -> creation.
+- `                updated_at=now,` -> maj.
+- `            )` -> fin creation.
+- `            self.state_store.orders[order_id] = order` -> sauve dans registre.
+- `            self.state_store.pending_queue.append(order_id)` -> ajoute a la file.
+- `        self._log(f"New order received: {order_id} ({pizza_type})")` -> log.
+- `        self._state_changed()` -> informe la GUI.
+- `    def _handle_complete(self, msg: dict) -> None:` -> logique COMPLETE.
+- `        order_id = msg["order_id"]` -> id commande.
+- `        pizzaiolo_id = msg["pizzaiolo_id"]` -> id pizzaiolo.
+- `        completed_at = msg.get("completed_at", time.time())` -> timestamp fin.
+- `        with self.state_store.lock:` -> protege l etat.
+- `            order = self.state_store.orders.get(order_id)` -> recupere l order.
+- `            if not order:` -> si inconnu.
+- `                self._log(f"Unknown order completed: {order_id}")` -> log.
+- `                return` -> stop.
+- `            if order.status != PROCESSING or order.assigned_to != pizzaiolo_id:` -> verifie coherence.
+- `                self._log(f"Late completion ignored for {order_id} from P{pizzaiolo_id}")` -> log.
+- `                return` -> stop.
+- `            order.status = COMPLETED` -> passe a termine.
+- `            order.completed_at = completed_at` -> stocke fin.
+- `            order.updated_at = completed_at` -> maj.
+- `            self.state_store.pizzaioli[pizzaiolo_id] = AVAILABLE` -> pizzaiolo libre.
+- `        self._log(f"Order completed: {order_id} by P{pizzaiolo_id}")` -> log.
+- `        self._state_changed(force_emit=True)` -> snapshot immediat.
+- `    def _try_assign(self) -> None:` -> tente d assigner.
+- `        while True:` -> boucle assignation.
+- `            with self.state_store.lock:` -> protege l etat.
+- `                available = [pid for pid, status in self.state_store.pizzaioli.items() if status == AVAILABLE]` -> libres.
+- `                if not available or not self.state_store.pending_queue:` -> si rien a faire.
+- `                    return` -> stop.
+- `                pizzaiolo_id = sorted(available)[0]` -> plus petit id dispo.
+- `                order_id = self.state_store.pending_queue.popleft()` -> commande en tete.
+- `                order = self.state_store.orders.get(order_id)` -> recupere la commande.
+- `                if not order:` -> si absente.
+- `                    continue` -> passe.
+- `                order.status = PROCESSING` -> passe en cours.
+- `                order.assigned_to = pizzaiolo_id` -> assigne.
+- `                order.started_at = time.time()` -> debut.
+- `                order.updated_at = order.started_at` -> maj.
+- `                order.attempts += 1` -> incremente compteur.
+- `                self.state_store.pizzaioli[pizzaiolo_id] = BUSY` -> pizzaiolo occupe.
+- `            self.pizzaiolo_inboxes[pizzaiolo_id].put(messages.assign(order_id, order.pizza_type))` -> envoie ASSIGN.
+- `            self.pizzaiolo_inboxes[pizzaiolo_id].put(messages.ack(order_id))` -> envoie ACK.
+- `            self._log(f"Assigned {order_id} to P{pizzaiolo_id}")` -> log.
+- `            self._state_changed(force_emit=True)` -> snapshot immediat.
+- `    def _state_changed(self, force_emit: bool = False) -> None:` -> centralise envoi GUI.
+- `        self._emit_state(force=force_emit)` -> appelle _emit_state.
+- `    def _emit_state(self, force: bool = False) -> None:` -> envoi vers GUI.
+- `        if self.gui_queue is None:` -> si pas de GUI.
+- `            return` -> stop.
+- `        now = time.time()` -> temps courant.
+- `        if not force and now - self._last_gui_emit < 0.2:` -> limite d envoi.
+- `            return` -> stop.
+- `        snapshot = self.state_store.snapshot()` -> cree snapshot.
+- `        self.gui_queue.put(messages.gui_state(snapshot))` -> envoie a GUI.
+- `        self._last_gui_emit = now` -> memorise l envoi.
+- `    def _log(self, message: str) -> None:` -> envoi log.
+- `        if self.gui_queue is not None:` -> si GUI presente.
+- `            self.gui_queue.put(messages.gui_log(message))` -> envoie log.

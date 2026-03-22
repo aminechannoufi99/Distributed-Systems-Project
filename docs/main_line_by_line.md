@@ -1,0 +1,111 @@
+# main.py line by line
+
+Note: blank lines are just for readability.
+
+- `from __future__ import annotations` -> active les annotations de types en avant.
+- `import itertools` -> outils pour un compteur infini.
+- `import random` -> choix aleatoire (pizzas, temps).
+- `import threading` -> gestion des threads.
+- `import time` -> temps et pauses.
+- `from queue import Queue` -> file thread-safe pour messages.
+- `from typing import Dict, List` -> types pour clarte.
+- `import messages` -> protocole des messages.
+- `from coordinator import Coordinator` -> classe coordinateur.
+- `from gui.dashboard import Dashboard` -> interface graphique.
+- `from pizzaiolo import Pizzaiolo` -> classe pizzaiolo.
+- `from state import StateStore` -> etat global.
+- `PIZZA_TYPES = [` -> debut liste types de pizza.
+- `    "Margherita",` -> type possible.
+- `    "Pepperoni",` -> type possible.
+- `    "Diavola",` -> type possible.
+- `    "Quattro Formaggi",` -> type possible.
+- `    "Funghi",` -> type possible.
+- `    "Veggie",` -> type possible.
+- `    "Prosciutto",` -> type possible.
+- `    "Capricciosa",` -> type possible.
+- `]` -> fin liste.
+- `PIZZA_PREP_RANGES = {` -> debut dictionnaire des temps.
+- `    "Margherita": (5, 7),` -> temps min/max.
+- `    "Pepperoni": (6, 9),` -> temps min/max.
+- `    "Diavola": (7, 10),` -> temps min/max.
+- `    "Quattro Formaggi": (7, 10),` -> temps min/max.
+- `    "Funghi": (6, 8),` -> temps min/max.
+- `    "Veggie": (5, 8),` -> temps min/max.
+- `    "Prosciutto": (6, 9),` -> temps min/max.
+- `    "Capricciosa": (7, 10),` -> temps min/max.
+- `}` -> fin dictionnaire.
+- `AUTO_GENERATE = False` -> auto commandes au demarrage.
+- `ARRIVAL_MODE = "burst"  # "burst" or "continuous"` -> mode auto.
+- `TOTAL_ORDERS = 8` -> nb de commandes auto.
+- `CONTINUOUS_MAX_INTERVAL = 4.0` -> delai max en continu.
+- `def main() -> None:` -> fonction principale.
+- `    stop_event = threading.Event()` -> signal d arret global.
+- `    coord_inbox: Queue = Queue()` -> file vers coordinateur.
+- `    gui_queue: Queue = Queue()` -> file vers GUI.
+- `    pizzaiolo_ids = list(range(4))` -> ids P0..P3.
+- `    pizzaiolo_inboxes: Dict[int, Queue] = {pid: Queue() for pid in pizzaiolo_ids}` -> une file par pizzaiolo.
+- `    state_store = StateStore()` -> etat global.
+- `    state_store.initialize(pizzaiolo_ids)` -> init des statuts.
+- `    pizzaioli: List[Pizzaiolo] = []` -> liste des threads.
+- `    for pid in pizzaiolo_ids:` -> boucle de creation.
+- `        worker = Pizzaiolo(` -> creation d un pizzaiolo.
+- `            pid,` -> id.
+- `            pizzaiolo_inboxes[pid],` -> file d entree.
+- `            coord_inbox,` -> file vers coordinateur.
+- `            stop_event=stop_event,` -> signal d arret.
+- `            prep_ranges_by_type=PIZZA_PREP_RANGES,` -> temps par type.
+- `        )` -> fin creation.
+- `        worker.start()` -> demarre le thread.
+- `        pizzaioli.append(worker)` -> ajoute a la liste.
+- `    def coordinator_factory() -> Coordinator:` -> fabrique un coordinateur.
+- `        return Coordinator(` -> creation.
+- `            state_store,` -> etat global.
+- `            coord_inbox,` -> file d entree.
+- `            pizzaiolo_inboxes,` -> files pizzaioli.
+- `            gui_queue=gui_queue,` -> file GUI.
+- `            stop_event=stop_event,` -> signal d arret.
+- `        )` -> fin creation.
+- `    coordinator = coordinator_factory()` -> instancie le coordinateur.
+- `    coordinator.start()` -> demarre le thread.
+- `    order_counter = itertools.count()` -> compteur infini.
+- `    counter_lock = threading.Lock()` -> lock pour le compteur.
+- `    def next_order_id() -> str:` -> genere un id.
+- `        with counter_lock:` -> protege le compteur.
+- `            return f"O{next(order_counter)}"` -> O0, O1, etc.
+- `    def send_new_order() -> None:` -> cree une commande.
+- `        order_id = next_order_id()` -> id.
+- `        pizza_type = random.choice(PIZZA_TYPES)` -> type aleatoire.
+- `        coord_inbox.put(messages.new_order(order_id, pizza_type))` -> envoie au coordinateur.
+- `    def start_order_generator() -> None:` -> lance l auto-generation.
+- `        def runner() -> None:` -> fonction du thread.
+- `            if ARRIVAL_MODE == "burst":` -> toutes en meme temps.
+- `                for _ in range(TOTAL_ORDERS):` -> nb total.
+- `                    send_new_order()` -> envoie.
+- `            else:` -> mode continu.
+- `                for _ in range(TOTAL_ORDERS):` -> nb total.
+- `                    send_new_order()` -> envoie.
+- `                    time.sleep(random.uniform(1.0, CONTINUOUS_MAX_INTERVAL))` -> pause aleatoire.
+- `        thread = threading.Thread(target=runner, name="OrderGenerator", daemon=True)` -> thread generateur.
+- `        thread.start()` -> demarre le generateur.
+- `    def shutdown() -> None:` -> arret propre.
+- `        if stop_event.is_set():` -> si deja arrete.
+- `            return` -> stop.
+- `        stop_event.set()` -> active l arret.
+- `        coord_inbox.put(messages.shutdown())` -> reveille le coordinateur.
+- `        for q in pizzaiolo_inboxes.values():` -> pour chaque pizzaiolo.
+- `            q.put(messages.shutdown())` -> envoie shutdown.
+- `    if AUTO_GENERATE:` -> si auto active.
+- `        start_order_generator()` -> lance la generation.
+- `    dashboard = Dashboard(` -> creation GUI.
+- `        event_queue=gui_queue,` -> file d evenements.
+- `        pizzaiolo_ids=pizzaiolo_ids,` -> ids a afficher.
+- `        on_new_order=send_new_order,` -> bouton New Order.
+- `        on_close=shutdown,` -> fermeture propre.
+- `    )` -> fin GUI.
+- `    dashboard.run()` -> lance l interface.
+- `    shutdown()` -> arret apres fermeture.
+- `    coordinator.join(timeout=2.0)` -> attend le coordinateur.
+- `    for worker in pizzaioli:` -> boucle pizzaioli.
+- `        worker.join(timeout=2.0)` -> attend chaque thread.
+- `if __name__ == "__main__":` -> execution directe.
+- `    main()` -> lance main.

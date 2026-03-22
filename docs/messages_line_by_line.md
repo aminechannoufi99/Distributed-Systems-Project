@@ -1,0 +1,47 @@
+# messages.py line by line
+
+Note: blank lines are just for readability.
+
+- `from __future__ import annotations` -> active les annotations de types en avant.
+- `import time` -> pour timestamps.
+- `from typing import Any, Dict, Optional` -> types utilises.
+- `# Message types` -> commentaire de section.
+- `ASSIGN = "ASSIGN"` -> type message assignation.
+- `COMPLETE = "COMPLETE"` -> type message completion.
+- `ACK = "ACK"` -> type message accusé.
+- `NEW_ORDER = "NEW_ORDER"` -> type message nouvelle commande.
+- `SHUTDOWN = "SHUTDOWN"` -> type message arret.
+- `# GUI event types` -> commentaire pour GUI.
+- `GUI_STATE = "GUI_STATE"` -> event snapshot vers GUI.
+- `GUI_LOG = "GUI_LOG"` -> event log vers GUI.
+- `def now_ts() -> float:` -> fonction timestamp.
+- `    return time.time()` -> retourne temps unix.
+- `def assign(order_id: str, pizza_type: str, assigned_at: Optional[float] = None) -> Dict[str, Any]:` -> fabrique ASSIGN.
+- `    return {` -> debut dictionnaire.
+- `        "type": ASSIGN,` -> type ASSIGN.
+- `        "order_id": order_id,` -> id commande.
+- `        "pizza_type": pizza_type,` -> type de pizza.
+- `        "assigned_at": assigned_at if assigned_at is not None else now_ts(),` -> timestamp assignation.
+- `    }` -> fin dictionnaire.
+- `def ack(order_id: str) -> Dict[str, Any]:` -> fabrique ACK.
+- `    return {"type": ACK, "order_id": order_id, "ts": now_ts()}` -> contenu ACK.
+- `def complete(pizzaiolo_id: int, order_id: str, completed_at: Optional[float] = None) -> Dict[str, Any]:` -> fabrique COMPLETE.
+- `    return {` -> debut dictionnaire.
+- `        "type": COMPLETE,` -> type COMPLETE.
+- `        "pizzaiolo_id": pizzaiolo_id,` -> id pizzaiolo.
+- `        "order_id": order_id,` -> id commande.
+- `        "completed_at": completed_at if completed_at is not None else now_ts(),` -> timestamp fin.
+- `    }` -> fin dictionnaire.
+- `def new_order(order_id: str, pizza_type: str, created_at: Optional[float] = None) -> Dict[str, Any]:` -> fabrique NEW_ORDER.
+- `    return {` -> debut dictionnaire.
+- `        "type": NEW_ORDER,` -> type NEW_ORDER.
+- `        "order_id": order_id,` -> id commande.
+- `        "pizza_type": pizza_type,` -> type pizza.
+- `        "created_at": created_at if created_at is not None else now_ts(),` -> timestamp creation.
+- `    }` -> fin dictionnaire.
+- `def shutdown() -> Dict[str, Any]:` -> fabrique SHUTDOWN.
+- `    return {"type": SHUTDOWN, "ts": now_ts()}` -> contenu SHUTDOWN.
+- `def gui_state(snapshot: Dict[str, Any]) -> Dict[str, Any]:` -> fabrique snapshot GUI.
+- `    return {"type": GUI_STATE, "snapshot": snapshot, "ts": now_ts()}` -> contenu snapshot.
+- `def gui_log(message: str) -> Dict[str, Any]:` -> fabrique log GUI.
+- `    return {"type": GUI_LOG, "message": message, "ts": now_ts()}` -> contenu log.

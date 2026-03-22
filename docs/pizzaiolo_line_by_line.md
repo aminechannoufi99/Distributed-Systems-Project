@@ -1,0 +1,55 @@
+# pizzaiolo.py line by line
+
+Note: blank lines are just for readability.
+
+- `from __future__ import annotations` -> active les annotations de types en avant.
+- `import random` -> temps aleatoire de preparation.
+- `import threading` -> thread pizzaiolo.
+- `import time` -> temps et sleep.
+- `from queue import Empty, Queue` -> file + exception Empty.
+- `from typing import Dict, Optional, Tuple` -> types utilises.
+- `import messages` -> protocole des messages.
+- `class Pizzaiolo(threading.Thread):` -> un pizzaiolo est un thread.
+- `    def __init__(` -> constructeur.
+- `        self,` -> instance.
+- `        pizzaiolo_id: int,` -> id pizzaiolo.
+- `        inbox: Queue,` -> file d entree.
+- `        coordinator_queue: Queue,` -> file vers coordinateur.
+- `        stop_event: Optional[threading.Event] = None,` -> signal d arret.
+- `        prep_range: Tuple[int, int] = (5, 10),` -> plage par defaut.
+- `        prep_ranges_by_type: Optional[Dict[str, Tuple[int, int]]] = None,` -> plages par type.
+- `    ) -> None:` -> fin signature.
+- `        super().__init__(name=f"Pizzaiolo-{pizzaiolo_id}", daemon=True)` -> init thread.
+- `        self.pizzaiolo_id = pizzaiolo_id` -> stocke id.
+- `        self.inbox = inbox` -> stocke file d entree.
+- `        self.coordinator_queue = coordinator_queue` -> stocke file vers coord.
+- `        self.prep_range = prep_range` -> stocke plage par defaut.
+- `        self.prep_ranges_by_type = prep_ranges_by_type or {}` -> stocke plages par type.
+- `        self.stop_event = stop_event or threading.Event()` -> signal d arret.
+- `    def run(self) -> None:` -> boucle principale.
+- `        while not self.stop_event.is_set():` -> tant que pas arrete.
+- `            try:` -> lecture file.
+- `                msg = self.inbox.get(timeout=0.5)` -> attend un message.
+- `            except Empty:` -> si rien.
+- `                continue` -> recommence.
+- `            msg_type = msg.get("type")` -> lit le type.
+- `            if msg_type == messages.SHUTDOWN:` -> si shutdown.
+- `                break` -> sortir.
+- `            if msg_type == messages.ACK:` -> ignore ACK.
+- `                continue` -> passe.
+- `            if msg_type != messages.ASSIGN:` -> si pas ASSIGN.
+- `                continue` -> passe.
+- `            self._process_order(msg)` -> traite la commande.
+- `    def _process_order(self, msg: dict) -> None:` -> preparation pizza.
+- `        order_id = msg["order_id"]` -> id commande.
+- `        pizza_type = msg.get("pizza_type")` -> type pizza.
+- `        range_for_type = self.prep_ranges_by_type.get(pizza_type, self.prep_range)` -> choisit plage.
+- `        prep_time = random.uniform(*range_for_type)` -> temps aleatoire.
+- `        started_at = time.time()` -> debut chrono.
+- `        while time.time() - started_at < prep_time:` -> boucle preparation.
+- `            if self.stop_event.is_set():` -> si arret.
+- `                return` -> stop.
+- `            time.sleep(0.2)` -> petite pause.
+- `        self._emit_complete(order_id)` -> envoie COMPLETE.
+- `    def _emit_complete(self, order_id: str) -> None:` -> envoi COMPLETE.
+- `        self.coordinator_queue.put(messages.complete(self.pizzaiolo_id, order_id))` -> message au coord.

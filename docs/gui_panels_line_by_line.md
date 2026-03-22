@@ -1,0 +1,71 @@
+# gui/panels.py line by line
+
+Note: blank lines are just for readability.
+
+- `from __future__ import annotations` -> active les annotations de types en avant.
+- `import tkinter as tk` -> base Tkinter.
+- `from tkinter import ttk` -> widgets ttk.
+- `from typing import Dict, Iterable` -> types utilises.
+- `from state import AVAILABLE, BUSY` -> statuts pour couleurs.
+- `STATUS_COLORS = {` -> dictionnaire couleurs.
+- `    AVAILABLE: "#2e7d32",` -> vert = libre.
+- `    BUSY: "#ef6c00",` -> orange = occupe.
+- `}` -> fin dictionnaire.
+- `class PizzaioliPanel(ttk.Frame):` -> panneau pizzaioli.
+- `    def __init__(self, master: tk.Widget, pizzaiolo_ids: Iterable[int]) -> None:` -> constructeur.
+- `        super().__init__(master)` -> init du frame.
+- `        title = ttk.Label(self, text="Pizzaioli", font=("Segoe UI", 12, "bold"))` -> titre.
+- `        title.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))` -> placement.
+- `        self._rows: Dict[int, ttk.Label] = {}` -> labels par pizzaiolo.
+- `        row = 1` -> ligne initiale.
+- `        for pid in pizzaiolo_ids:` -> boucle ids.
+- `            label = ttk.Label(self, text=f"P{pid}: AVAILABLE")` -> label initial.
+- `            label.grid(row=row, column=0, sticky="w", padx=12, pady=2)` -> placement label.
+- `            self._rows[pid] = label` -> stocke label.
+- `            row += 1` -> ligne suivante.
+- `    def update_statuses(self, statuses: Dict[int, str]) -> None:` -> maj des statuts.
+- `        for pid, status in statuses.items():` -> boucle sur statuts.
+- `            label = self._rows.get(pid)` -> recupere label.
+- `            if not label:` -> si pas trouve.
+- `                continue` -> ignore.
+- `            color = STATUS_COLORS.get(status, "#424242")` -> couleur.
+- `            label.configure(text=f"P{pid}: {status}", foreground=color)` -> maj label.
+- `class OrdersPanel(ttk.Frame):` -> panneau commandes.
+- `    def __init__(self, master: tk.Widget) -> None:` -> constructeur.
+- `        super().__init__(master)` -> init frame.
+- `        title = ttk.Label(self, text="Orders", font=("Segoe UI", 12, "bold"))` -> titre.
+- `        title.grid(row=0, column=0, sticky="w", padx=8, pady=(8, 4))` -> placement.
+- `        columns = ("pizza", "status", "assigned", "attempts")` -> colonnes du tableau.
+- `        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=12)` -> tableau.
+- `        self.tree.heading("pizza", text="Pizza")` -> entete.
+- `        self.tree.heading("status", text="Status")` -> entete.
+- `        self.tree.heading("assigned", text="Assigned")` -> entete.
+- `        self.tree.heading("attempts", text="Attempts")` -> entete.
+- `        self.tree.column("pizza", width=140)` -> largeur.
+- `        self.tree.column("status", width=120)` -> largeur.
+- `        self.tree.column("assigned", width=80, anchor="center")` -> largeur.
+- `        self.tree.column("attempts", width=80, anchor="center")` -> largeur.
+- `        self.tree.grid(row=1, column=0, sticky="nsew", padx=8, pady=4)` -> placement.
+- `        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)` -> scrollbar.
+- `        self.tree.configure(yscrollcommand=scrollbar.set)` -> lien scroll.
+- `        scrollbar.grid(row=1, column=1, sticky="ns", pady=4)` -> placement scroll.
+- `        self.grid_rowconfigure(1, weight=1)` -> ligne extensible.
+- `        self.grid_columnconfigure(0, weight=1)` -> colonne extensible.
+- `    def update_orders(self, orders: Dict[str, dict]) -> None:` -> maj tableau.
+- `        existing = set(self.tree.get_children(""))` -> lignes existantes.
+- `        incoming = set(orders.keys())` -> lignes attendues.
+- `        for order_id, data in orders.items():` -> boucle commandes.
+- `            assigned_to = data.get("assigned_to")` -> pizzaiolo assigne.
+- `            assigned_text = f"P{assigned_to}" if assigned_to is not None else "-"` -> texte assignation.
+- `            values = (` -> tuple des valeurs.
+- `                data.get("pizza_type", "-"),` -> type pizza.
+- `                data.get("status", "-"),` -> statut.
+- `                assigned_text,` -> assignation.
+- `                data.get("attempts", 0),` -> nb assignations.
+- `            )` -> fin tuple.
+- `            if order_id in existing:` -> si ligne existe.
+- `                self.tree.item(order_id, values=values)` -> met a jour.
+- `            else:` -> sinon.
+- `                self.tree.insert("", "end", iid=order_id, values=values)` -> ajoute.
+- `        for iid in existing - incoming:` -> lignes obsoletes.
+- `            self.tree.delete(iid)` -> supprime.
