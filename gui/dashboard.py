@@ -11,6 +11,8 @@ from gui.panels import OrdersPanel, PizzaioliPanel
 
 
 class Dashboard:
+    """Tkinter dashboard for real-time monitoring."""
+
     def __init__(
         self,
         event_queue: "queue.Queue",
@@ -43,21 +45,22 @@ class Dashboard:
         header = ttk.Frame(self.root)
         header.pack(side="top", fill="x")
 
-        title = ttk.Label(header, text="Pizza Delivery System", font=("Segoe UI", 16, "bold"))
+        title = ttk.Label(
+            header, text="Pizza Delivery System", font=("Segoe UI", 16, "bold")
+        )
         title.pack(side="left", padx=12, pady=10)
 
         controls = ttk.Frame(header)
         controls.pack(side="right", padx=12, pady=10)
-
-        new_order_btn = ttk.Button(controls, text="New Order", command=self.on_new_order)
-        new_order_btn.grid(row=0, column=0, padx=6)
+        ttk.Button(controls, text="New Order", command=self.on_new_order).grid(
+            row=0, column=0, padx=6
+        )
 
         body = ttk.Frame(self.root)
         body.pack(side="top", fill="both", expand=True)
 
         left = ttk.Frame(body)
         left.pack(side="left", fill="y")
-
         right = ttk.Frame(body)
         right.pack(side="right", fill="both", expand=True)
 
@@ -69,12 +72,16 @@ class Dashboard:
 
         log_frame = ttk.Frame(right)
         log_frame.pack(side="bottom", fill="both", expand=False, padx=8, pady=6)
-        log_label = ttk.Label(log_frame, text="Coordinator Log", font=("Segoe UI", 11, "bold"))
-        log_label.pack(side="top", anchor="w")
+        ttk.Label(log_frame, text="Coordinator Log", font=("Segoe UI", 11, "bold")).pack(
+            side="top", anchor="w"
+        )
 
         self.log_text = tk.Text(log_frame, height=8, wrap="word", state="disabled")
         self.log_text.pack(side="left", fill="both", expand=True)
-        log_scroll = ttk.Scrollbar(log_frame, orient="vertical", command=self.log_text.yview)
+
+        log_scroll = ttk.Scrollbar(
+            log_frame, orient="vertical", command=self.log_text.yview
+        )
         log_scroll.pack(side="right", fill="y")
         self.log_text.configure(yscrollcommand=log_scroll.set)
 
@@ -102,8 +109,6 @@ class Dashboard:
     def _update_state(self, snapshot: Dict[str, object]) -> None:
         pizzaioli = snapshot.get("pizzaioli", {})
         orders = snapshot.get("orders", {})
-        total_orders = len(orders)
-
         self.pizzaioli_panel.update_statuses(pizzaioli)
         self.orders_panel.update_orders(orders)
 

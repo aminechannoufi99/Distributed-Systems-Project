@@ -10,6 +10,8 @@ import messages
 
 
 class Pizzaiolo(threading.Thread):
+    """Worker that simulates pizza preparation."""
+
     def __init__(
         self,
         pizzaiolo_id: int,
@@ -28,17 +30,16 @@ class Pizzaiolo(threading.Thread):
         self.prep_range = prep_range
         self.prep_ranges_by_type = prep_ranges_by_type or {}
         self.stop_event = stop_event or threading.Event()
-        # Crash simulation is optional; when crash_prob is 0.0 it is disabled.
         self.crash_prob = crash_prob
         self.crash_delay_range = crash_delay_range
         self._crash_until = 0.0
 
     def run(self) -> None:
         while not self.stop_event.is_set():
-            # Simulate a temporary crash by refusing to process messages.
             if self._crash_until > time.time():
                 time.sleep(0.2)
                 continue
+
             try:
                 msg = self.inbox.get(timeout=0.5)
             except Empty:
@@ -47,7 +48,7 @@ class Pizzaiolo(threading.Thread):
             msg_type = msg.get("type")
             if msg_type == messages.SHUTDOWN:
                 break
-            if msg_type == messages.ACK:
+            if msg_type in {messages.ACK, None}:
                 continue
             if msg_type != messages.ASSIGN:
                 continue
@@ -58,15 +59,12 @@ class Pizzaiolo(threading.Thread):
         order_id = msg["order_id"]
         pizza_type = msg.get("pizza_type")
 
-        # Optional crash simulation: sometimes "die" mid-prep and never complete.
         if self.crash_prob > 0.0 and random.random() < self.crash_prob:
-            # Go "down" for a short period, then come back.
             self._crash_until = time.time() + random.uniform(*self.crash_delay_range)
             return
 
         range_for_type = self.prep_ranges_by_type.get(pizza_type, self.prep_range)
         prep_time = random.uniform(*range_for_type)
-
         started_at = time.time()
         while time.time() - started_at < prep_time:
             if self.stop_event.is_set():

@@ -12,7 +12,7 @@ from coordinator import Coordinator
 from gui.dashboard import Dashboard
 from pizzaiolo import Pizzaiolo
 from state import StateStore
-
+from supervisor import Supervisor
 
 PIZZA_TYPES = [
     "Margherita",
@@ -37,15 +37,17 @@ PIZZA_PREP_RANGES = {
 }
 
 AUTO_GENERATE = False
-ARRIVAL_MODE = "burst"  # "burst" or "continuous"
+ARRIVAL_MODE = "burst"
 TOTAL_ORDERS = 8
 CONTINUOUS_MAX_INTERVAL = 4.0
-CRASH_PROB = 0.2  # Set to 0.1 for 10% random crash simulation.
-TIMEOUT_SECONDS = 10.0  # Coordinator timeout before marking a worker as crashed.
-RECOVERY_SECONDS = 6.0  # Cooldown before a crashed worker becomes available again.
+
+CRASH_PROB = 0.2
+TIMEOUT_SECONDS = 10.0
+RECOVERY_SECONDS = 6.0
 
 
 def main() -> None:
+    """Run the pizza delivery simulation with a monitoring GUI."""
     stop_event = threading.Event()
     coord_inbox: Queue = Queue()
     gui_queue: Queue = Queue()
@@ -54,7 +56,7 @@ def main() -> None:
     pizzaiolo_inboxes: Dict[int, Queue] = {pid: Queue() for pid in pizzaiolo_ids}
 
     state_store = StateStore()
-    state_store.initialize(pizzaiolo_ids)
+    state_store.initialize(pizzaiolo_ids)  # Central registry for global state.
 
     pizzaioli: List[Pizzaiolo] = []
     for pid in pizzaiolo_ids:
@@ -69,6 +71,7 @@ def main() -> None:
         worker.start()
         pizzaioli.append(worker)
 
+    # Factory so the Supervisor can recreate the Coordinator if needed.
     def coordinator_factory() -> Coordinator:
         return Coordinator(
             state_store,
@@ -80,8 +83,12 @@ def main() -> None:
             recovery_seconds=RECOVERY_SECONDS,
         )
 
-    coordinator = coordinator_factory()
-    coordinator.start()
+    supervisor = Supervisor(
+        coordinator_queue=coord_inbox,
+        coordinator_factory=coordinator_factory,
+        stop_event=stop_event,
+    )
+    supervisor.start()
 
     order_counter = itertools.count()
     counter_lock = threading.Lock()
@@ -128,8 +135,7 @@ def main() -> None:
     dashboard.run()
 
     shutdown()
-
-    coordinator.join(timeout=2.0)
+    supervisor.join(timeout=2.0)
     for worker in pizzaioli:
         worker.join(timeout=2.0)
 

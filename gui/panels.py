@@ -6,7 +6,6 @@ from typing import Dict, Iterable
 
 from state import AVAILABLE, BUSY, CRASHED
 
-
 STATUS_COLORS = {
     AVAILABLE: "#2e7d32",
     BUSY: "#ef6c00",
@@ -15,6 +14,8 @@ STATUS_COLORS = {
 
 
 class PizzaioliPanel(ttk.Frame):
+    """List of pizzaioli with color-coded status."""
+
     def __init__(self, master: tk.Widget, pizzaiolo_ids: Iterable[int]) -> None:
         super().__init__(master)
         title = ttk.Label(self, text="Pizzaioli", font=("Segoe UI", 12, "bold"))
@@ -38,6 +39,8 @@ class PizzaioliPanel(ttk.Frame):
 
 
 class OrdersPanel(ttk.Frame):
+    """Table of orders and their current state."""
+
     def __init__(self, master: tk.Widget) -> None:
         super().__init__(master)
         title = ttk.Label(self, text="Orders", font=("Segoe UI", 12, "bold"))

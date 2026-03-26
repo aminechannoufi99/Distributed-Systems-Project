@@ -3,14 +3,11 @@ from __future__ import annotations
 import time
 from typing import Any, Dict, Optional
 
-# Message types
 ASSIGN = "ASSIGN"
 COMPLETE = "COMPLETE"
 ACK = "ACK"
 NEW_ORDER = "NEW_ORDER"
 SHUTDOWN = "SHUTDOWN"
-
-# GUI event types
 GUI_STATE = "GUI_STATE"
 GUI_LOG = "GUI_LOG"
 
@@ -19,7 +16,9 @@ def now_ts() -> float:
     return time.time()
 
 
-def assign(order_id: str, pizza_type: str, assigned_at: Optional[float] = None) -> Dict[str, Any]:
+def assign(
+    order_id: str, pizza_type: str, assigned_at: Optional[float] = None
+) -> Dict[str, Any]:
     return {
         "type": ASSIGN,
         "order_id": order_id,
@@ -32,7 +31,10 @@ def ack(order_id: str) -> Dict[str, Any]:
     return {"type": ACK, "order_id": order_id, "ts": now_ts()}
 
 
-def complete(pizzaiolo_id: int, order_id: str, completed_at: Optional[float] = None) -> Dict[str, Any]:
+
+def complete(
+    pizzaiolo_id: int, order_id: str, completed_at: Optional[float] = None
+) -> Dict[str, Any]:
     return {
         "type": COMPLETE,
         "pizzaiolo_id": pizzaiolo_id,
@@ -41,7 +43,9 @@ def complete(pizzaiolo_id: int, order_id: str, completed_at: Optional[float] = N
     }
 
 
-def new_order(order_id: str, pizza_type: str, created_at: Optional[float] = None) -> Dict[str, Any]:
+def new_order(
+    order_id: str, pizza_type: str, created_at: Optional[float] = None
+) -> Dict[str, Any]:
     return {
         "type": NEW_ORDER,
         "order_id": order_id,

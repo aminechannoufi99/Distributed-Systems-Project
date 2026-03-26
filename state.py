@@ -6,19 +6,19 @@ from collections import deque
 from dataclasses import asdict, dataclass
 from typing import Any, Deque, Dict, List, Optional
 
-# Pizzaioli statuses
 AVAILABLE = "AVAILABLE"
 BUSY = "BUSY"
 CRASHED = "CRASHED"
-
-# Order statuses
 PENDING = "PENDING"
 PROCESSING = "PROCESSING"
 COMPLETED = "COMPLETED"
+REASSIGNED = "REASSIGNED"
 
 
 @dataclass
 class Order:
+    """Represents a single pizza order in the system."""
+
     order_id: str
     pizza_type: str
     status: str
@@ -28,16 +28,19 @@ class Order:
     started_at: Optional[float] = None
     completed_at: Optional[float] = None
     attempts: int = 0
+    last_failed_pizzaiolo: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]) -> "Order":
+    def from_dict(data: Dict[str, Any]) -> "Order": #never use it
         return Order(**data)
 
 
 class StateStore:
+    """Shared, thread-safe state container."""
+
     def __init__(self) -> None:
         self.lock = threading.RLock()
         self.pending_queue: Deque[str] = deque()
